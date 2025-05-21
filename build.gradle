@@ -93,21 +93,21 @@ jooq {
 }
 
 
-//flyway {
-//    driver = 'org.postgresql.Driver'
-//    url = 'jdbc:postgresql://' + properties.getProperty('datasource_url') + '/' + properties.getProperty('datasource_database_name')
-//    user = properties.getProperty('datasource_username')
-//    password = properties.getProperty('datasource_password')
-//    locations = ['classpath:db/migration']
-//}
+flyway {
+    driver = 'org.postgresql.Driver'
+    url = 'jdbc:postgresql://' + properties.getProperty('datasource_url') + '/' + properties.getProperty('datasource_database_name')
+    user = properties.getProperty('datasource_username')
+    password = properties.getProperty('datasource_password')
+    locations = ['classpath:db/migration']
+}
 
 tasks.named('compileJava') {
     dependsOn 'generateJooq'
 }
 
-//tasks.named('generateJooq') {
-//    dependsOn 'flywayMigrate'
-//}
+tasks.named('generateJooq') {
+    dependsOn 'flywayMigrate'
+}
 
 tasks.named('test') {
     useJUnitPlatform()
