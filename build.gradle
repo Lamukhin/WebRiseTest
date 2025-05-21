@@ -1,0 +1,114 @@
+buildscript {
+    dependencies {
+        classpath 'org.postgresql:postgresql:42.7.2'
+        classpath 'org.flywaydb:flyway-database-postgresql:11.3.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.11'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.flywaydb.flyway' version '11.3.1'
+    id 'nu.studer.jooq' version '9.0'
+}
+
+group = 'com.lamukhin'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-jooq'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql:11.3.1'
+
+    compileOnly 'org.projectlombok:lombok'
+    implementation 'org.postgresql:postgresql:42.7.2'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    implementation 'org.jooq:jooq:3.19.18'
+    implementation 'org.jooq:jooq-codegen:3.19.18'
+    jooqGenerator 'org.postgresql:postgresql:42.7.2'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+
+def properties = new Properties()
+//В реальном проекте это не лежит тут же.
+file("./secret_information.env").withInputStream { properties.load(it) }
+
+jooq {
+    version = '3.19.18'
+    configurations {
+        main {
+            generateSchemaSourceOnCompilation = false
+            generationTool {
+                jdbc {
+                    driver = 'org.postgresql.Driver'
+                    url = "jdbc:postgresql://${properties.getProperty('datasource_url')}/${properties.getProperty('datasource_database_name')}"
+                    user = properties.getProperty('datasource_username')
+                    password = properties.getProperty('datasource_password')
+                }
+                generator {
+                    database {
+                        name = 'org.jooq.meta.postgres.PostgresDatabase'
+                        includes = '.*'
+                        inputSchema = 'public'
+                    }
+                    generate {
+                        daos = true
+                        pojos = true
+                    }
+                    target {
+                        packageName = 'com.lamukhin.generated'
+                        directory = layout.buildDirectory.dir("generated/sources/jooq/main").get().asFile.toString()
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+//flyway {
+//    driver = 'org.postgresql.Driver'
+//    url = 'jdbc:postgresql://' + properties.getProperty('datasource_url') + '/' + properties.getProperty('datasource_database_name')
+//    user = properties.getProperty('datasource_username')
+//    password = properties.getProperty('datasource_password')
+//    locations = ['classpath:db/migration']
+//}
+
+tasks.named('compileJava') {
+    dependsOn 'generateJooq'
+}
+
+//tasks.named('generateJooq') {
+//    dependsOn 'flywayMigrate'
+//}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+
+  db:
+    restart: always
+    image: postgres:12-alpine
+    environment:
+      POSTGRES_USER: ${datasource_username}
+      POSTGRES_PASSWORD: ${datasource_password}
+      POSTGRES_DB: ${datasource_database_name}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d webrise_test_task" ] # Проверка готовности Postgres
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  webrise-test:
+    build: ./
+    restart: always
+    ports:
+      - '8080:8080'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      datasource_url: ${datasource_url}
+      datasource_database_name: ${datasource_database_name}
+      datasource_username: ${datasource_username}
+      datasource_password: ${datasource_password}
